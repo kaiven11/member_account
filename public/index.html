@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会员账号管理平台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; background: #0f1115; color: #e5e7eb; font-size: 14px; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #6b7280; font-size: 12px; margin-bottom: 18px; }
+  .stats { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat { background: #1a1d24; border: 1px solid #2a2f3a; border-radius: 8px; padding: 12px 20px; min-width: 120px; transition: border-color .15s, transform .15s; }
+  .stat .num { font-size: 22px; font-weight: 600; color: #22c55e; }
+  .stat .lbl { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .stat.clickable { cursor: pointer; }
+  .stat.clickable:hover { border-color: #2563eb; transform: translateY(-1px); }
+  .stat .num.member { color: #4ade80; }
+  .stat .num.free { color: #9ca3af; }
+  .stat .num.expired { color: #f87171; }
+  .stat .num.blue { color: #60a5fa; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .tab { position: relative; padding: 8px 20px; background: #1a1d24; border: 1px solid #2a2f3a; border-radius: 8px; cursor: pointer; color: #9ca3af; transition: all .15s; }
+  .tab:hover { color: #e5e7eb; border-color: #3b4252; }
+  .tab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .tab .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 6px; background: rgba(255,255,255,.18); border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card { background: #1a1d24; border: 1px solid #2a2f3a; border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+  .card h3 { font-size: 15px; margin-bottom: 12px; color: #d1d5db; }
+  input, textarea, select { background: #0f1115; border: 1px solid #2a2f3a; color: #e5e7eb; border-radius: 6px; padding: 8px 10px; font-size: 13px; outline: none; transition: border-color .15s; }
+  input:focus, textarea:focus, select:focus { border-color: #2563eb; }
+  textarea { width: 100%; min-height: 90px; font-family: monospace; }
+  button { background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; transition: opacity .15s, background .15s; }
+  button:hover { opacity: .88; }
+  button:active { opacity: 1; transform: translateY(1px); }
+  button.ghost { background: #2a2f3a; }
+  button.ghost:hover { background: #3a4052; opacity: 1; }
+  button.danger { background: #7f1d1d; }
+  button.danger:hover { background: #991b1b; opacity: 1; }
+  button.mini { padding: 4px 10px; font-size: 12px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .row.grow { flex: 1; }
+  .spacer { flex: 1; }
+  .tbl-wrap { overflow: auto; max-height: 72vh; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #232733; font-size: 13px; white-space: nowrap; }
+  th { color: #6b7280; font-weight: 500; font-size: 12px; position: sticky; top: 0; background: #1a1d24; z-index: 2; }
+  tbody tr:nth-child(even) td { background: #161920; }
+  tbody tr:hover td { background: #1e222b; }
+  tr.bin-expired td { opacity: .45; }
+  .mono { font-family: monospace; font-size: 12px; }
+  .bin-tag { display: inline-block; background: #1e3a5f; color: #93c5fd; border-radius: 4px; padding: 2px 8px; margin: 2px 4px 2px 0; font-family: monospace; font-size: 12px; }
+  .bin-tag .x { color: #ef4444; cursor: pointer; margin-left: 5px; }
+  .tag { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 12px; }
+  .tag.member { background: #14532d; color: #4ade80; }
+  .tag.free { background: #374151; color: #9ca3af; }
+  .tag.expired { background: #7f1d1d; color: #fca5a5; }
+  .tag.link { cursor: pointer; }
+  .tag.link:hover { filter: brightness(1.2); }
+  select.tag-sel { font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; }
+  select.tag-sel:hover { border-color: #3b4252; }
+  select.tag-sel.st-member { background: #14532d; color: #4ade80; }
+  select.tag-sel.st-free { background: #374151; color: #9ca3af; }
+  select.tag-sel.st-expired { background: #7f1d1d; color: #fca5a5; }
+  .tag.brand { background: #1f2937; color: #cbd5e1; }
+  .tag.brand-Unknown { background: #374151; color: #9ca3af; }
+  .tag.brand-Visa { background: #1e3a8a; color: #93c5fd; }
+  .tag.brand-Mastercard { background: #7c2d12; color: #fdba74; }
+  .tag.brand-Amex { background: #0c4a6e; color: #7dd3fc; }
+  .tag.brand-JCB { background: #14532d; color: #86efac; }
+  .tag.brand-UnionPay { background: #7f1d1d; color: #fca5a5; }
+  .tag.brand-Discover { background: #7c2d12; color: #fed7aa; }
+  .tag.brand-DinersClub { background: #581c87; color: #d8b4fe; }
+  .tag.brand-Mir { background: #164e63; color: #67e8f9; }
+  .tag.exp-valid { background: #14532d; color: #4ade80; }
+  .tag.exp-soon { background: #78350f; color: #fbbf24; }
+  .tag.exp-expired { background: #7f1d1d; color: #fca5a5; }
+  .tag.hq-valid { background: #14532d; color: #4ade80; }
+  .tag.hq-invalid { background: #7f1d1d; color: #fca5a5; }
+  .tag.hq-pending { background: #374151; color: #9ca3af; }
+  .tag.score-S { background: #7c3aed; color: #e9d5ff; }
+  .tag.score-A { background: #2563eb; color: #dbeafe; }
+  .tag.score-B { background: #16a34a; color: #dcfce7; }
+  .tag.score-C { background: #ca8a04; color: #fef9c3; }
+  .tag.score- { background: #374151; color: #9ca3af; }
+  .validity-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { cursor: pointer; padding: 4px 12px; border-radius: 14px; font-size: 12px; background: #14171d; border: 1px solid #2a2f3a; color: #9ca3af; transition: all .15s; }
+  .chip:hover { border-color: #2563eb; color: #e5e7eb; }
+  .chip b { margin-left: 5px; font-weight: 600; }
+  .chip.c-valid b { color: #4ade80; }
+  .chip.c-soon b { color: #fbbf24; }
+  .chip.c-expired b { color: #f87171; }
+  .chip.c-unknown b { color: #9ca3af; }
+  .bin-more { display: inline-block; background: #1e3a5f; color: #93c5fd; border-radius: 4px; padding: 2px 8px; margin: 2px 4px 2px 0; font-family: monospace; font-size: 12px; cursor: pointer; }
+  .bin-more:hover { background: #2557a0; }
+  td.bins-cell { white-space: normal; min-width: 260px; max-width: 420px; }
+  .empty .ico { font-size: 24px; margin-bottom: 8px; }
+  .empty .tip { display: block; color: #374151; font-size: 12px; margin-top: 6px; }
+  .empty { text-align: center; color: #4b5563; padding: 30px; }
+  .toast { position: fixed; top: 20px; right: 20px; background: #16a34a; color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 9999; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.4); animation: toastIn .2s ease; }
+  .toast.error { background: #dc2626; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 999; }
+  .modal-bg.show { display: flex; }
+  .modal { background: #1a1d24; border: 1px solid #2a2f3a; border-radius: 12px; padding: 22px; width: 520px; max-width: 92vw; max-height: 88vh; overflow: auto; animation: modalIn .18s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+  .modal h3 { margin-bottom: 14px; }
+  .modal .row { justify-content: flex-end; margin-bottom: 0; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 5px; }
+  .field input, .field textarea, .field select { width: 100%; }
+  .muted { color: #6b7280; font-size: 12px; }
+  .link-btn { color: #60a5fa; cursor: pointer; text-decoration: none; }
+  .link-btn:hover { text-decoration: underline; }
+  .pwd-toggle { cursor: pointer; color: #6b7280; margin-left: 4px; user-select: none; }
+  .pwd-toggle:hover { color: #9ca3af; }
+  .btn-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🗂 会员账号管理平台</h1>
+  <div class="sub">商品 · BIN · 会员账号 统一管理</div>
+
+  <div class="stats">
+    <div class="stat clickable" onclick="gotoProducts()"><div class="num" id="stProducts">0</div><div class="lbl">商品数</div></div>
+    <div class="stat clickable" onclick="gotoAccounts('')"><div class="num" id="stAccounts">0</div><div class="lbl">会员账号总数</div></div>
+    <div class="stat clickable" onclick="gotoBins()"><div class="num" id="stBins">0</div><div class="lbl">BIN 总数</div></div>
+    <div class="stat clickable" onclick="gotoAccounts('member')"><div class="num member" id="stMember">0</div><div class="lbl">会员可用</div></div>
+    <div class="stat clickable" onclick="gotoAccounts('free')"><div class="num free" id="stFree">0</div><div class="lbl">免费</div></div>
+    <div class="stat clickable" onclick="gotoAccounts('expired')"><div class="num expired" id="stExpired">0</div><div class="lbl">已过期</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="products">📦 商品管理</div>
+    <div class="tab" data-tab="accounts">👤 账号管理<span class="badge" id="tabAccounts">0</span></div>
+    <div class="tab" data-tab="bins">🔢 BIN 卡头管理<span class="badge" id="tabBins">0</span></div>
+    <div class="tab" data-tab="hq">⭐ HQ 卡头<span class="badge" id="tabHq">0</span></div>
+  </div>
+
+  <!-- ══════ 商品管理 ══════ -->
+  <div class="panel active" id="panel-products">
+    <div class="card">
+      <h3>➕ 添加商品</h3>
+      <div class="row">
+        <input id="pName" placeholder="商品名称 (如 OpenArt Starter)" style="width:220px">
+        <input id="pSite" placeholder="官网地址 (如 https://openart.ai)" style="width:260px">
+        <input id="pBins" placeholder="BIN (多个用逗号/空格分隔)" style="width:320px">
+        <button onclick="addProduct()">添加商品</button>
+      </div>
+      <div class="muted">一个商品可关联多个 BIN，用逗号或空格分隔</div>
+    </div>
+
+    <div class="card">
+      <h3>📦 商品列表</h3>
+      <div class="row">
+        <input id="pSearch" placeholder="搜索商品名/官网/BIN" style="width:280px" oninput="debounced('products')">
+        <button class="ghost mini" onclick="loadProducts()">刷新</button>
+      </div>
+      <div class="tbl-wrap" id="productsTable"></div>
+    </div>
+  </div>
+
+  <!-- ══════ 账号管理 ══════ -->
+  <div class="panel" id="panel-accounts">
+    <div class="card">
+      <h3>📥 批量导入账号</h3>
+      <div class="row">
+        <select id="impProduct" style="width:240px"></select>
+        <select id="impStatus" style="width:130px">
+          <option value="member">会员</option>
+          <option value="free">免费</option>
+          <option value="expired">已过期</option>
+        </select>
+      </div>
+      <textarea id="impText" placeholder="每行一个账号，格式:&#10;email|password&#10;email|password&#10;(也支持逗号或空格分隔)"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button onclick="batchImport()">导入</button>
+        <span class="muted" id="impHint"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>👤 账号列表</h3>
+      <div class="row">
+        <input id="aSearch" placeholder="搜索邮箱/密码/商品/备注" style="width:260px" oninput="debounced('accounts')">
+        <select id="aFilterProduct" style="width:220px" onchange="loadAccounts()"><option value="">全部商品</option></select>
+        <select id="aFilterStatus" style="width:130px" onchange="loadAccounts()">
+          <option value="">全部状态</option>
+          <option value="member">会员</option>
+          <option value="free">免费</option>
+          <option value="expired">已过期</option>
+        </select>
+        <button class="ghost mini" onclick="loadAccounts()">刷新</button>
+        <span class="spacer"></span>
+        <button class="ghost mini" onclick="copySelected()">复制选中</button>
+        <button class="ghost mini" onclick="exportAccounts()">导出 CSV</button>
+        <button class="danger mini" onclick="deleteSelected()">删除选中</button>
+        <button class="danger mini" onclick="deleteByProduct()">按商品清空</button>
+      </div>
+      <div class="tbl-wrap" id="accountsTable"></div>
+    </div>
+  </div>
+
+  <!-- ══════ BIN 卡头管理 ══════ -->
+  <div class="panel" id="panel-bins">
+    <div class="card">
+      <h3>➕ 添加 BIN 卡头</h3>
+      <div class="row">
+        <input id="bBin" placeholder="BIN (如 559888 / 379550)" style="width:180px">
+        <input id="bCategory" placeholder="分类 (如 试用卡头 / 免3DS)" style="width:200px">
+        <input id="bBank" placeholder="银行 (可选)" style="width:160px">
+        <input id="bNote" placeholder="备注 (可选)" style="width:200px">
+        <button onclick="addBin()">添加</button>
+      </div>
+      <div class="muted">品牌自动识别 (Amex / Visa / Mastercard / Discover ...)；支持粘贴 卡号|月|年|CVV，自动提取卡号段和有效期</div>
+    </div>
+
+    <div class="card">
+      <h3>📥 批量导入 BIN</h3>
+      <div class="row">
+        <input id="bImpCategory" placeholder="统一分类 (可选)" style="width:220px">
+      </div>
+      <textarea id="bImpText" placeholder="每行一个 BIN，格式:&#10;559888                       → 品牌自动识别&#10;559888|试用卡头               → 分类&#10;559888|试用卡头|备注          → 分类+备注&#10;559999|Mastercard|Chase|免3DS|好卡头 → 品牌|银行|分类|备注&#10;532655525512|03|29|000      → 卡号|月|年|CVV，自动提取有效期"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button onclick="batchImportBins()">导入</button>
+        <span class="muted" id="bImpHint"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🔢 BIN 列表</h3>
+      <div class="validity-chips" id="binChips"></div>
+      <div class="row">
+        <input id="bSearch" placeholder="搜索 BIN/品牌/银行/分类" style="width:260px" oninput="debounced('bins')">
+        <select id="bFilterBrand" style="width:150px" onchange="loadBins()">
+          <option value="">全部品牌</option>
+          <option>Amex</option><option>Visa</option><option>Mastercard</option>
+          <option>Discover</option><option>JCB</option><option>UnionPay</option><option>Mir</option><option>DinersClub</option>
+        </select>
+        <select id="bFilterCategory" style="width:180px" onchange="loadBins()"><option value="">全部分类</option></select>
+        <select id="bFilterValidity" style="width:160px" onchange="loadBins()">
+          <option value="">全部有效性</option>
+          <option value="valid">有效</option>
+          <option value="soon">即将过期(30天)</option>
+          <option value="expired">已过期</option>
+          <option value="unknown">未设置</option>
+        </select>
+        <button class="ghost mini" onclick="loadBins()">刷新</button>
+        <span class="spacer"></span>
+        <button class="ghost mini" onclick="copySelectedBins()">复制选中</button>
+        <button class="danger mini" onclick="deleteSelectedBins()">删除选中</button>
+      </div>
+      <div class="tbl-wrap" id="binsTable"></div>
+    </div>
+  </div>
+
+  <!-- ══════ HQ 卡头 ══════ -->
+  <div class="panel" id="panel-hq">
+    <div class="card">
+      <h3>⭐ 批量导入 HQ 卡头</h3>
+      <div class="muted" style="margin-bottom:10px">格式: BIN|CVV|来源链接|评分|成功率|备注，仅 BIN 必填，其余可选</div>
+      <textarea id="hqImpText" placeholder="532655525512|000|https://ccshop.example.com/item/1|A|85%|备注&#10;532655525512|000|https://ccshop.example.com/item/2|B|70%&#10;532655525512||https://ccshop.example.com/item/3|S||来源必填时也可以这样"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button onclick="batchImportHq()">导入</button>
+        <span class="muted" id="hqImpHint"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>⭐ HQ 卡头列表</h3>
+      <div class="row">
+        <input id="hqSearch" placeholder="搜索 BIN/来源/备注" style="width:260px" oninput="debounced('hq')">
+        <select id="hqFilterStatus" style="width:150px" onchange="loadHq()">
+          <option value="">全部状态</option>
+          <option value="valid">有效</option>
+          <option value="invalid">无效</option>
+          <option value="pending">待验证</option>
+        </select>
+        <select id="hqFilterScore" style="width:130px" onchange="loadHq()">
+          <option value="">全部评分</option>
+          <option>S</option><option>A</option><option>B</option><option>C</option>
+        </select>
+        <button class="ghost mini" onclick="loadHq()">刷新</button>
+        <span class="spacer"></span>
+        <button class="ghost mini" onclick="copySelectedHq()">复制选中</button>
+        <button class="danger mini" onclick="deleteSelectedHq()">删除选中</button>
+      </div>
+      <div class="tbl-wrap" id="hqTable"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑商品弹窗 -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <h3 id="editTitle">编辑商品</h3>
+    <input type="hidden" id="editId">
+    <div class="field"><label>商品名称</label><input id="editName"></div>
+    <div class="field"><label>官网地址</label><input id="editSite"></div>
+    <div class="field"><label>BIN 列表 (逗号/空格分隔)</label><input id="editBins"></div>
+    <div class="field"><label>备注</label><input id="editNote"></div>
+    <div class="row">
+      <button class="ghost" onclick="closeEdit()">取消</button>
+      <button onclick="saveEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑账号弹窗 -->
+<div class="modal-bg" id="acctModal">
+  <div class="modal">
+    <h3>编辑账号</h3>
+    <input type="hidden" id="acctEditId">
+    <div class="field"><label>邮箱</label><input id="acctEditEmail"></div>
+    <div class="field"><label>密码</label><input id="acctEditPassword"></div>
+    <div class="field"><label>商品</label><select id="acctEditProduct"></select></div>
+    <div class="field"><label>状态</label>
+      <select id="acctEditStatus">
+        <option value="member">会员</option>
+        <option value="free">免费</option>
+        <option value="expired">已过期</option>
+      </select>
+    </div>
+    <div class="field"><label>到期时间</label><input id="acctEditExpire" placeholder="如 2026-12-31 或 2026/12/31"></div>
+    <div class="field"><label>备注</label><input id="acctEditNote"></div>
+    <div class="row">
+      <button class="ghost" onclick="closeAcctEdit()">取消</button>
+      <button onclick="saveAcctEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑 BIN 弹窗 -->
+<div class="modal-bg" id="binModal">
+  <div class="modal">
+    <h3>编辑 BIN</h3>
+    <input type="hidden" id="binEditId">
+    <div class="field"><label>BIN</label><input id="binEditNum"></div>
+    <div class="field"><label>品牌</label>
+      <select id="binEditBrand">
+        <option>Unknown</option><option>Amex</option><option>Visa</option><option>Mastercard</option>
+        <option>Discover</option><option>JCB</option><option>UnionPay</option><option>Mir</option><option>DinersClub</option>
+      </select>
+    </div>
+    <div class="field"><label>银行</label><input id="binEditBank"></div>
+    <div class="field"><label>分类</label><input id="binEditCategory"></div>
+    <div class="field"><label>有效期 (如 2029-03，留空表示未设置)</label><input id="binEditExpire" placeholder="YYYY-MM"></div>
+    <div class="field"><label>备注</label><input id="binEditNote"></div>
+    <div class="row">
+      <button class="ghost" onclick="closeBinEdit()">取消</button>
+      <button onclick="saveBinEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑 HQ 卡头弹窗 -->
+<div class="modal-bg" id="hqModal">
+  <div class="modal">
+    <h3>编辑 HQ 卡头</h3>
+    <input type="hidden" id="hqEditId">
+    <div class="field"><label>BIN</label><input id="hqEditBin"></div>
+    <div class="field"><label>CVV</label><input id="hqEditCvv"></div>
+    <div class="field"><label>来源链接</label><input id="hqEditSource"></div>
+    <div class="field"><label>评分</label>
+      <select id="hqEditScore">
+        <option value="">无</option><option>S</option><option>A</option><option>B</option><option>C</option>
+      </select>
+    </div>
+    <div class="field"><label>成功率</label><input id="hqEditRate" placeholder="如 85%"></div>
+    <div class="field"><label>状态</label>
+      <select id="hqEditStatus">
+        <option value="valid">有效</option><option value="invalid">无效</option><option value="pending">待验证</option>
+      </select>
+    </div>
+    <div class="field"><label>备注</label><input id="hqEditNote"></div>
+    <div class="row">
+      <button class="ghost" onclick="closeHqEdit()">取消</button>
+      <button onclick="saveHqEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allProducts = [], allAccounts = [];
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  return r.json();
+}
+function toast(msg, isError) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── Tabs ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(x => x.classList.toggle('active', x.id === 'panel-' + name));
+  if (name === 'products') loadProducts();
+  else if (name === 'accounts') { fillProductSelects(); loadAccounts(); }
+  else if (name === 'bins') { loadBins(); fillBinCategories(); }
+  else if (name === 'hq') loadHq();
+}
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.tab));
+});
+
+// ── 顶部统计卡片导航 ──
+function gotoProducts() { switchTab('products'); }
+function gotoBins() { switchTab('bins'); }
+function gotoAccounts(status) {
+  document.getElementById('aFilterStatus').value = status || '';
+  switchTab('accounts');
+}
+function gotoAccountsByProduct(name) {
+  gotoAccounts('');
+  const sel = document.getElementById('aFilterProduct');
+  const opts = sel.options;
+  for (let i = 0; i < opts.length; i++) {
+    if (opts[i].value === name) { sel.selectedIndex = i; break; }
+  }
+  loadAccounts();
+}
+function filterBinsBy(v) {
+  document.getElementById('bFilterValidity').value = v;
+  switchTab('bins');
+  loadBins();
+}
+
+// ── 搜索防抖 ──
+const debounceTimers = {};
+function debounced(kind) {
+  clearTimeout(debounceTimers[kind]);
+  debounceTimers[kind] = setTimeout(() => {
+    if (kind === 'products') loadProducts();
+    else if (kind === 'accounts') loadAccounts();
+    else if (kind === 'bins') loadBins();
+    else if (kind === 'hq') loadHq();
+  }, 250);
+}
+
+// ── 统计 ──
+async function loadStats() {
+  const s = await api('/api/stats');
+  document.getElementById('stProducts').textContent = s.products || 0;
+  document.getElementById('stAccounts').textContent = s.accounts || 0;
+  document.getElementById('stBins').textContent = s.bins || 0;
+  const sc = s.statusCounts || {};
+  document.getElementById('stMember').textContent = sc.member || 0;
+  document.getElementById('stFree').textContent = sc.free || 0;
+  document.getElementById('stExpired').textContent = sc.expired || 0;
+  document.getElementById('tabAccounts').textContent = s.accounts || 0;
+  document.getElementById('tabBins').textContent = s.bins || 0;
+  document.getElementById('tabHq').textContent = s.hqBins || 0;
+  const bc = s.binCounts || {};
+  const chips = document.getElementById('binChips');
+  if (chips) chips.innerHTML =
+    `<span class="chip c-valid" onclick="filterBinsBy('valid')">有效<b>${bc.valid || 0}</b></span>` +
+    `<span class="chip c-soon" onclick="filterBinsBy('soon')">即将过期<b>${bc.soon || 0}</b></span>` +
+    `<span class="chip c-expired" onclick="filterBinsBy('expired')">已过期<b>${bc.expired || 0}</b></span>` +
+    `<span class="chip c-unknown" onclick="filterBinsBy('unknown')">未设置<b>${bc.unknown || 0}</b></span>`;
+}
+
+// ══════ 商品 ══════
+async function loadProducts() {
+  const q = document.getElementById('pSearch').value.trim();
+  allProducts = await api('/api/products' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  const el = document.getElementById('productsTable');
+  if (!allProducts.length) { el.innerHTML = '<div class="empty"><div class="ico">📦</div>暂无商品<span class="tip">在上方填入商品名称即可添加</span></div>'; return; }
+  let html = '<table><tr><th>商品名称</th><th>官网地址</th><th>BIN 列表</th><th>账号数</th><th>操作</th></tr>';
+  for (const p of allProducts) {
+    const binsArr = p.bins || [];
+    let bins;
+    if (!binsArr.length) {
+      bins = '<span class="muted">无</span>';
+    } else {
+      const tag = b => `<span class="bin-tag">${esc(b)}<span class="x" onclick="removeBin('${p.id}','${esc(b)}')">×</span></span>`;
+      if (binsArr.length <= 5) {
+        bins = binsArr.map(tag).join('');
+      } else {
+        bins = binsArr.slice(0, 5).map(tag).join('') +
+          `<span class="bin-more" title="点击展开全部" onclick="this.style.display='none';this.nextElementSibling.style.display='inline'">+${binsArr.length - 5}</span>` +
+          `<span style="display:none">${binsArr.slice(5).map(tag).join('')}</span>`;
+      }
+    }
+    html += `<tr>
+      <td><b>${esc(p.name)}</b></td>
+      <td class="mono">${p.site ? `<a href="${esc(p.site)}" target="_blank" style="color:#60a5fa">${esc(p.site)}</a>` : '-'}</td>
+      <td class="bins-cell">${bins} <button class="ghost mini" onclick="addBinPrompt('${p.id}')">+BIN</button></td>
+      <td>${p.accountCount ? `<a class="link-btn" onclick="gotoAccountsByProduct('${esc(p.name)}')">${p.accountCount}</a>` : 0}</td>
+      <td class="row-actions">
+        <button class="ghost mini" onclick="openEdit('${p.id}')">编辑</button>
+        <button class="danger mini" onclick="delProduct('${p.id}')">删除</button>
+      </td>
+    </tr>`;
+  }
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+async function addProduct() {
+  const name = document.getElementById('pName').value.trim();
+  const site = document.getElementById('pSite').value.trim();
+  const bins = document.getElementById('pBins').value.trim();
+  if (!name) return toast('请输入商品名称');
+  const r = await api('/api/products', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, site, bins: bins ? bins.split(/[\s,]+/) : [] })
+  });
+  if (r.success) {
+    document.getElementById('pName').value = '';
+    document.getElementById('pSite').value = '';
+    document.getElementById('pBins').value = '';
+    toast('商品已添加' + (r.syncedBins ? `, ${r.syncedBins} 个 BIN 已入库` : ''));
+    loadProducts(); loadStats(); fillProductSelects();
+    if (r.syncedBins) { loadBins(); fillBinCategories(); }
+  } else toast('失败: ' + (r.error || ''));
+}
+
+async function delProduct(id) {
+  if (!confirm('删除此商品? (不会删除其账号)')) return;
+  await api('/api/products/' + id, { method: 'DELETE' });
+  toast('已删除'); loadProducts(); loadStats(); fillProductSelects();
+}
+
+function openEdit(id) {
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('editId').value = p.id;
+  document.getElementById('editName').value = p.name || '';
+  document.getElementById('editSite').value = p.site || '';
+  document.getElementById('editBins').value = (p.bins || []).join(', ');
+  document.getElementById('editNote').value = p.note || '';
+  document.getElementById('editModal').classList.add('show');
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('show'); }
+async function saveEdit() {
+  const id = document.getElementById('editId').value;
+  const r = await api('/api/products', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id,
+      name: document.getElementById('editName').value.trim(),
+      site: document.getElementById('editSite').value.trim(),
+      bins: document.getElementById('editBins').value.split(/[\s,]+/).filter(Boolean),
+      note: document.getElementById('editNote').value.trim()
+    })
+  });
+  if (r.success) { closeEdit(); toast('已保存'); loadProducts(); loadStats(); fillProductSelects(); }
+  else toast('失败: ' + (r.error || ''));
+}
+
+async function addBinPrompt(id) {
+  const bin = prompt('输入 BIN (多个用逗号分隔，也支持 卡号|月|年|CVV 自动提取有效期):');
+  if (!bin) return;
+  const r = await api('/api/products/' + id + '/bins', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bins: bin.split(/[\s,]+/).filter(Boolean) })
+  });
+  if (r.success) { toast('已添加 ' + r.added + ' 个 BIN'); loadProducts(); loadStats(); }
+}
+async function removeBin(id, bin) {
+  await api('/api/products/' + id + '/bins/' + encodeURIComponent(bin), { method: 'DELETE' });
+  loadProducts(); loadStats();
+}
+
+// ══════ 账号 ══════
+async function loadAccounts() {
+  const q = document.getElementById('aSearch').value.trim();
+  const prod = document.getElementById('aFilterProduct').value;
+  const status = document.getElementById('aFilterStatus').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (prod) params.set('product', prod);
+  if (status) params.set('status', status);
+  allAccounts = await api('/api/accounts?' + params.toString());
+  const el = document.getElementById('accountsTable');
+  if (!allAccounts.length) { el.innerHTML = '<div class="empty"><div class="ico">👤</div>暂无账号<span class="tip">用上方「批量导入账号」粘贴 email|password 即可添加</span></div>'; return; }
+  let html = '<table><tr><th style="width:30px"><input type="checkbox" id="chkAll" onclick="toggleAll(this)"></th><th>邮箱</th><th>密码</th><th>商品</th><th>状态</th><th>到期</th><th>备注</th><th>操作</th></tr>';
+  for (const a of allAccounts) {
+    const st = a.status || 'member';
+    const pwd = esc(a.password || '-');
+    html += `<tr>
+      <td><input type="checkbox" class="rowChk" value="${a.id}"></td>
+      <td class="mono">${esc(a.email)}</td>
+      <td class="mono"><span class="pwd">${pwd}</span><span class="pwd-toggle" onclick="togglePwd(this)">👁</span></td>
+      <td>${esc(a.product || '(未分类)')}</td>
+      <td>${statusSelect(a.id, st)}</td>
+      <td class="mono">${esc(a.expireAt || '-')}</td>
+      <td class="muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(a.note || '')}</td>
+      <td class="row-actions">
+        <button class="ghost mini" onclick="copyAcct('${a.id}')">复制</button>
+        <button class="ghost mini" onclick="openAcctEdit('${a.id}')">编辑</button>
+        <button class="danger mini" onclick="delAccount('${a.id}')">删除</button>
+      </td>
+    </tr>`;
+  }
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+function statusSelect(id, st) {
+  return `<select class="tag-sel st-${st}" title="点击切换状态" onchange="setStatus('${id}', this, this.value)">
+    <option value="member" ${st==='member'?'selected':''}>会员</option>
+    <option value="free" ${st==='free'?'selected':''}>免费</option>
+    <option value="expired" ${st==='expired'?'selected':''}>已过期</option></select>`;
+}
+async function setStatus(id, el, status) {
+  const a = allAccounts.find(x => x.id === id);
+  if (!a || a.status === status) return;
+  const r = await api('/api/accounts/' + id, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  if (!r.success) return toast('修改失败: ' + (r.error || ''), true);
+  a.status = status;
+  el.outerHTML = statusSelect(id, status);
+  const labels = { member: '会员', free: '免费', expired: '已过期' };
+  toast('已标记为「' + labels[status] + '」');
+  loadStats();
+  const filter = document.getElementById('aFilterStatus').value;
+  if (filter && filter !== status) loadAccounts();
+}
+function togglePwd(eye) {
+  const pwd = eye.previousElementSibling;
+  if (pwd.dataset.txt == null) pwd.dataset.txt = pwd.textContent;
+  pwd.textContent = (pwd.textContent === pwd.dataset.txt) ? '••••••' : pwd.dataset.txt;
+}
+
+function toggleAll(cb) {
+  document.querySelectorAll('.rowChk').forEach(c => c.checked = cb.checked);
+}
+function selectedIds() {
+  return Array.from(document.querySelectorAll('.rowChk:checked')).map(c => c.value);
+}
+async function delAccount(id) {
+  if (!confirm('删除此账号?')) return;
+  await api('/api/accounts/' + id, { method: 'DELETE' });
+  toast('已删除'); loadAccounts(); loadStats();
+}
+async function deleteSelected() {
+  const ids = selectedIds();
+  if (!ids.length) return toast('未选中账号');
+  if (!confirm('删除选中的 ' + ids.length + ' 个账号?')) return;
+  const r = await api('/api/accounts/delete-batch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+  toast('已删除 ' + r.removed + ' 个'); loadAccounts(); loadStats();
+}
+async function deleteByProduct() {
+  const prod = document.getElementById('aFilterProduct').value;
+  if (!prod) return toast('请先在筛选里选择商品');
+  if (!confirm('清空商品「' + prod + '」下的所有账号?')) return;
+  const r = await api('/api/accounts/delete-batch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product: prod })
+  });
+  toast('已删除 ' + r.removed + ' 个'); loadAccounts(); loadStats();
+}
+function copyAcct(id) {
+  const a = allAccounts.find(x => x.id === id);
+  if (!a) return;
+  const txt = a.email + '|' + (a.password || '');
+  navigator.clipboard.writeText(txt).then(() => toast('已复制: ' + txt));
+}
+
+// ── 编辑账号 ──
+function openAcctEdit(id) {
+  const a = allAccounts.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('acctEditId').value = a.id;
+  document.getElementById('acctEditEmail').value = a.email || '';
+  document.getElementById('acctEditPassword').value = a.password || '';
+  const sel = document.getElementById('acctEditProduct');
+  sel.innerHTML = '<option value="">(未分类)</option>' +
+    allProducts.map(p => `<option value="${esc(p.name)}" data-id="${p.id}">${esc(p.name)}</option>`).join('');
+  sel.value = a.product || '';
+  document.getElementById('acctEditStatus').value = a.status || 'member';
+  document.getElementById('acctEditExpire').value = a.expireAt || '';
+  document.getElementById('acctEditNote').value = a.note || '';
+  document.getElementById('acctModal').classList.add('show');
+}
+function closeAcctEdit() { document.getElementById('acctModal').classList.remove('show'); }
+async function saveAcctEdit() {
+  const id = document.getElementById('acctEditId').value;
+  const prodOpt = document.getElementById('acctEditProduct').selectedOptions[0];
+  const body = {
+    email: document.getElementById('acctEditEmail').value.trim(),
+    password: document.getElementById('acctEditPassword').value,
+    product: document.getElementById('acctEditProduct').value,
+    productId: prodOpt ? (prodOpt.dataset.id || '') : '',
+    status: document.getElementById('acctEditStatus').value,
+    expireAt: document.getElementById('acctEditExpire').value.trim(),
+    note: document.getElementById('acctEditNote').value.trim()
+  };
+  if (!body.email) return toast('邮箱不能为空', true);
+  const r = await api('/api/accounts/' + id, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (r.success) { closeAcctEdit(); toast('已保存'); loadAccounts(); loadStats(); loadProducts(); }
+  else toast('失败: ' + (r.error || ''), true);
+}
+
+// ── 批量复制 / 导出 ──
+async function copySelected() {
+  const ids = selectedIds();
+  if (!ids.length) return toast('未选中账号', true);
+  const lines = allAccounts.filter(a => ids.includes(a.id)).map(a => a.email + '|' + (a.password || ''));
+  await navigator.clipboard.writeText(lines.join('\n'));
+  toast('已复制 ' + lines.length + ' 个账号');
+}
+function exportAccounts() {
+  const rows = [['email', 'password', 'product', 'status', 'expireAt', 'note']];
+  for (const a of allAccounts) {
+    rows.push([a.email || '', a.password || '', a.product || '', a.status || 'member', a.expireAt || '', a.note || '']);
+  }
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const aEl = document.createElement('a');
+  aEl.href = url;
+  aEl.download = 'accounts_' + new Date().toISOString().slice(0, 10) + '.csv';
+  aEl.click();
+  URL.revokeObjectURL(url);
+  toast('已导出 ' + (allAccounts.length) + ' 条账号');
+}
+
+async function batchImport() {
+  const sel = document.getElementById('impProduct');
+  const prod = sel.options[sel.selectedIndex];
+  const product = prod ? prod.value : '';
+  const productId = prod ? prod.dataset.id : '';
+  const status = document.getElementById('impStatus').value;
+  const text = document.getElementById('impText').value;
+  if (!text.trim()) return toast('请粘贴账号文本');
+  const r = await api('/api/accounts/batch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product, productId, status, text })
+  });
+  if (r.success) {
+    document.getElementById('impText').value = '';
+    document.getElementById('impHint').textContent = `导入 ${r.added} 个, 重复跳过 ${r.duplicates} 个`;
+    toast('导入成功 ' + r.added + ' 个');
+    loadAccounts(); loadStats(); loadProducts();
+  } else toast('导入失败: ' + (r.error || ''), true);
+}
+
+async function fillProductSelects() {
+  const prods = await api('/api/products');
+  const opts = prods.map(p => `<option value="${esc(p.name)}" data-id="${p.id}">${esc(p.name)}</option>`).join('');
+  document.getElementById('impProduct').innerHTML = '<option value="">(未分类)</option>' + opts;
+  document.getElementById('aFilterProduct').innerHTML = '<option value="">全部商品</option>' + opts;
+}
+
+// ══════ BIN 卡头管理 ══════
+let allBins = [], allHq = [];
+async function loadBins() {
+  const q = document.getElementById('bSearch').value.trim();
+  const brand = document.getElementById('bFilterBrand').value;
+  const category = document.getElementById('bFilterCategory').value;
+  const validity = document.getElementById('bFilterValidity').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (brand) params.set('brand', brand);
+  if (category) params.set('category', category);
+  if (validity) params.set('validity', validity);
+  allBins = await api('/api/bins?' + params.toString());
+  const el = document.getElementById('binsTable');
+  if (!allBins.length) { el.innerHTML = '<div class="empty"><div class="ico">🔢</div>暂无 BIN<span class="tip">可用上方「添加 BIN 卡头」或「批量导入」入库</span></div>'; return; }
+  let html = '<table><tr><th style="width:30px"><input type="checkbox" onclick="toggleAllBins(this)"></th><th>BIN</th><th>品牌</th><th>分类</th><th>银行</th><th>有效期</th><th>添加日期</th><th>备注</th><th>操作</th></tr>';
+  for (const b of allBins) {
+    const brand = b.brand || 'Unknown';
+    const v = b.validity || 'unknown';
+    const expCell = b.expireAt
+      ? `<span class="tag exp-${v}" title="${v === 'expired' ? '已过期' : (v === 'soon' ? '即将过期' : '有效')}">${esc(b.expireAt)}</span>`
+      : '<span class="muted">-</span>';
+    const date = b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : '-';
+    html += `<tr${v === 'expired' ? ' class="bin-expired"' : ''}>
+      <td><input type="checkbox" class="binChk" value="${b.id}"></td>
+      <td class="mono"><b>${esc(b.bin)}</b></td>
+      <td><span class="tag brand brand-${esc(brand)}">${esc(brand)}</span></td>
+      <td>${esc(b.category || '-')}</td>
+      <td>${esc(b.bank || '-')}</td>
+      <td>${expCell}</td>
+      <td class="mono">${date}</td>
+      <td class="muted" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(b.note || '')}</td>
+      <td class="row-actions">
+        <button class="ghost mini" onclick="copyBin('${b.id}')">复制</button>
+        <button class="ghost mini" onclick="openBinEdit('${b.id}')">编辑</button>
+        <button class="danger mini" onclick="delBin('${b.id}')">删除</button>
+      </td>
+    </tr>`;
+  }
+  html += '</table>';
+  el.innerHTML = html;
+}
+function toggleAllBins(cb) { document.querySelectorAll('.binChk').forEach(c => c.checked = cb.checked); }
+function selectedBinIds() { return Array.from(document.querySelectorAll('.binChk:checked')).map(c => c.value); }
+
+// ── 编辑 BIN ──
+function openBinEdit(id) {
+  const b = allBins.find(x => x.id === id);
+  if (!b) return;
+  document.getElementById('binEditId').value = b.id;
+  document.getElementById('binEditNum').value = b.bin || '';
+  document.getElementById('binEditBrand').value = b.brand || 'Unknown';
+  document.getElementById('binEditBank').value = b.bank || '';
+  document.getElementById('binEditCategory').value = b.category || '';
+  document.getElementById('binEditExpire').value = b.expireAt || '';
+  document.getElementById('binEditNote').value = b.note || '';
+  document.getElementById('binModal').classList.add('show');
+}
+function closeBinEdit() { document.getElementById('binModal').classList.remove('show'); }
+async function saveBinEdit() {
+  const id = document.getElementById('binEditId').value;
+  const body = {
+    id,
+    bin: document.getElementById('binEditNum').value.trim(),
+    brand: document.getElementById('binEditBrand').value,
+    bank: document.getElementById('binEditBank').value.trim(),
+    category: document.getElementById('binEditCategory').value.trim(),
+    expireAt: document.getElementById('binEditExpire').value.trim(),
+    note: document.getElementById('binEditNote').value.trim()
+  };
+  if (!body.bin) return toast('BIN 不能为空', true);
+  const r = await api('/api/bins', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (r.success) { closeBinEdit(); toast('已保存: ' + r.bin.bin + ' (' + r.bin.brand + ')' + (r.bin.expireAt ? ' 有效期 ' + r.bin.expireAt : '')); loadBins(); loadStats(); fillBinCategories(); }
+  else toast('失败: ' + (r.error || ''), true);
+}
+async function copySelectedBins() {
+  const ids = selectedBinIds();
+  if (!ids.length) return toast('未选中 BIN', true);
+  const lines = allBins.filter(b => ids.includes(b.id)).map(b => b.bin);
+  await navigator.clipboard.writeText(lines.join('\n'));
+  toast('已复制 ' + lines.length + ' 个 BIN');
+}
+
+async function addBin() {
+  const bin = document.getElementById('bBin').value.trim();
+  if (!bin) return toast('请输入 BIN');
+  const r = await api('/api/bins', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      bin,
+      category: document.getElementById('bCategory').value.trim(),
+      bank: document.getElementById('bBank').value.trim(),
+      note: document.getElementById('bNote').value.trim()
+    })
+  });
+  if (r.success) {
+    document.getElementById('bBin').value = '';
+    toast('已添加: ' + r.bin.bin + ' (' + r.bin.brand + ')' + (r.bin.expireAt ? ' 有效期 ' + r.bin.expireAt : ''));
+    loadBins(); loadStats(); fillBinCategories();
+  } else toast('失败: ' + (r.error || ''), true);
+}
+
+async function batchImportBins() {
+  const text = document.getElementById('bImpText').value;
+  const category = document.getElementById('bImpCategory').value.trim();
+  if (!text.trim()) return toast('请粘贴 BIN 文本');
+  const r = await api('/api/bins/batch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, category })
+  });
+  if (r.success) {
+    document.getElementById('bImpText').value = '';
+    document.getElementById('bImpHint').textContent = `导入 ${r.added} 个, 重复 ${r.duplicates} 个` + (r.cardFormat ? `, 卡号格式提取有效期 ${r.cardFormat} 条` : '');
+    toast('导入成功 ' + r.added + ' 个' + (r.cardFormat ? ` (含 ${r.cardFormat} 条卡号格式)` : ''));
+    loadBins(); loadStats(); fillBinCategories();
+  } else toast('导入失败: ' + (r.error || ''), true);
+}
+
+async function delBin(id) {
+  if (!confirm('删除此 BIN?')) return;
+  await api('/api/bins/' + id, { method: 'DELETE' });
+  toast('已删除'); loadBins(); loadStats();
+}
+async function deleteSelectedBins() {
+  const ids = selectedBinIds();
+  if (!ids.length) return toast('未选中 BIN');
+  if (!confirm('删除选中的 ' + ids.length + ' 个 BIN?')) return;
+  const r = await api('/api/bins/delete-batch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+  toast('已删除 ' + r.removed + ' 个'); loadBins(); loadStats();
+}
+function copyBin(id) {
+  const b = allBins.find(x => x.id === id);
+  if (!b) return;
+  navigator.clipboard.writeText(b.bin).then(() => toast('已复制: ' + b.bin));
+}
+async function fillBinCategories() {
+  const cats = await api('/api/bins/categories');
+  document.getElementById('bFilterCategory').innerHTML = '<option value="">全部分类</option>' +
+    cats.map(c => `<option>${esc(c)}</option>`).join('');
+}
+
+// ══════ HQ 卡头 ══════
+async function loadHq() {
+  const q = document.getElementById('hqSearch').value.trim();
+  const status = document.getElementById('hqFilterStatus').value;
+  const score = document.getElementById('hqFilterScore').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (status) params.set('status', status);
+  if (score) params.set('score', score);
+  allHq = await api('/api/hq-bins?' + params.toString());
+  const el = document.getElementById('hqTable');
+  if (!allHq.length) { el.innerHTML = '<div class="empty"><div class="ico">⭐</div>暂无 HQ 卡头<span class="tip">在上方粘贴 BIN|CVV|来源|评分|成功率|备注 即可批量导入</span></div>'; return; }
+  let html = '<table><tr><th style="width:30px"><input type="checkbox" onclick="toggleAllHq(this)"></th><th>BIN</th><th>CVV</th><th>来源</th><th>评分</th><th>成功率</th><th>状态</th><th>备注</th><th>添加日期</th><th>操作</th></tr>';
+  for (const h of allHq) {
+    const status = h.status || 'pending';
+    const score = h.score || '';
+    const source = h.source ? `<a href="${esc(h.source)}" target="_blank" style="color:#60a5fa;max-width:200px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.source)}</a>` : '-';
+    const date = h.createdAt ? new Date(h.createdAt).toISOString().slice(0, 10) : '-';
+    html += `<tr>
+      <td><input type="checkbox" class="hqChk" value="${h.id}"></td>
+      <td class="mono"><b>${esc(h.bin)}</b></td>
+      <td class="mono">${esc(h.cvv || '-')}</td>
+      <td>${source}</td>
+      <td><span class="tag score-${esc(score)}">${esc(score || '无')}</span></td>
+      <td>${esc(h.successRate || '-')}</td>
+      <td><span class="tag hq-${status}">${hqStatusLabel(status)}</span></td>
+      <td class="muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(h.note || '')}</td>
+      <td class="mono">${date}</td>
+      <td class="row-actions">
+        <button class="ghost mini" onclick="copyHq('${h.id}')">复制</button>
+        <button class="ghost mini" onclick="openHqEdit('${h.id}')">编辑</button>
+        <button class="danger mini" onclick="delHq('${h.id}')">删除</button>
+      </td>
+    </tr>`;
+  }
+  html += '</table>';
+  el.innerHTML = html;
+}
+function hqStatusLabel(s) {
+  return { valid: '有效', invalid: '无效', pending: '待验证' }[s] || s;
+}
+function toggleAllHq(cb) { document.querySelectorAll('.hqChk').forEach(c => c.checked = cb.checked); }
+function selectedHqIds() { return Array.from(document.querySelectorAll('.hqChk:checked')).map(c => c.value); }
+async function batchImportHq() {
+  const text = document.getElementById('hqImpText').value;
+  const status = document.getElementById('hqFilterStatus').value;
+  if (!text.trim()) return toast('请粘贴 HQ 卡头文本');
+  const r = await api('/api/hq-bins/batch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, status })
+  });
+  if (r.success) {
+    document.getElementById('hqImpText').value = '';
+    document.getElementById('hqImpHint').textContent = `导入 ${r.added} 个, 重复 ${r.duplicates} 个, 无效 ${r.invalid || 0} 个`;
+    toast('导入成功 ' + r.added + ' 个');
+    loadHq(); loadStats();
+  } else toast('导入失败: ' + (r.error || ''), true);
+}
+function openHqEdit(id) {
+  const h = allHq.find(x => x.id === id);
+  if (!h) return;
+  document.getElementById('hqEditId').value = h.id;
+  document.getElementById('hqEditBin').value = h.bin || '';
+  document.getElementById('hqEditCvv').value = h.cvv || '';
+  document.getElementById('hqEditSource').value = h.source || '';
+  document.getElementById('hqEditScore').value = h.score || '';
+  document.getElementById('hqEditRate').value = h.successRate || '';
+  document.getElementById('hqEditStatus').value = h.status || 'pending';
+  document.getElementById('hqEditNote').value = h.note || '';
+  document.getElementById('hqModal').classList.add('show');
+}
+function closeHqEdit() { document.getElementById('hqModal').classList.remove('show'); }
+async function saveHqEdit() {
+  const id = document.getElementById('hqEditId').value;
+  const body = {
+    bin: document.getElementById('hqEditBin').value.trim(),
+    cvv: document.getElementById('hqEditCvv').value.trim(),
+    source: document.getElementById('hqEditSource').value.trim(),
+    score: document.getElementById('hqEditScore').value,
+    successRate: document.getElementById('hqEditRate').value.trim(),
+    status: document.getElementById('hqEditStatus').value,
+    note: document.getElementById('hqEditNote').value.trim()
+  };
+  if (!body.bin) return toast('BIN 不能为空', true);
+  const r = await api('/api/hq-bins/' + id, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (r.success) { closeHqEdit(); toast('已保存'); loadHq(); loadStats(); }
+  else toast('失败: ' + (r.error || ''), true);
+}
+async function delHq(id) {
+  if (!confirm('删除此 HQ 卡头?')) return;
+  await api('/api/hq-bins/' + id, { method: 'DELETE' });
+  toast('已删除'); loadHq(); loadStats();
+}
+async function deleteSelectedHq() {
+  const ids = selectedHqIds();
+  if (!ids.length) return toast('未选中 HQ 卡头', true);
+  if (!confirm('删除选中的 ' + ids.length + ' 个 HQ 卡头?')) return;
+  const r = await api('/api/hq-bins/batch-delete', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+  toast('已删除 ' + r.removed + ' 个'); loadHq(); loadStats();
+}
+function copyHq(id) {
+  const h = allHq.find(x => x.id === id);
+  if (!h) return;
+  const txt = h.bin + (h.cvv ? '|' + h.cvv : '');
+  navigator.clipboard.writeText(txt).then(() => toast('已复制: ' + txt));
+}
+async function copySelectedHq() {
+  const ids = selectedHqIds();
+  if (!ids.length) return toast('未选中 HQ 卡头', true);
+  const lines = allHq.filter(h => ids.includes(h.id)).map(h => h.bin + (h.cvv ? '|' + h.cvv : ''));
+  await navigator.clipboard.writeText(lines.join('\n'));
+  toast('已复制 ' + lines.length + ' 个 HQ 卡头');
+}
+
+// ── 初始化 ──
+(async function init() {
+  await loadStats();
+  await loadProducts();
+  await fillProductSelects();
+})();
+</script>
+</body>
+</html>

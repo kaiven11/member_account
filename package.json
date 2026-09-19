@@ -1,0 +1,13 @@
+{
+  "name": "member_manager",
+  "version": "1.0.0",
+  "description": "会员账号管理平台 (商品 / BIN / 会员账号 统一管理)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  }
+}
